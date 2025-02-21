@@ -1,0 +1,84 @@
+
+
+Создадим README.md с описанием проекта:
+
+```markdown:README.md
+# Geo Service API
+
+Сервис для работы с геоданными, использующий DaData API для поиска и геокодирования адресов.
+
+## Стек технологий
+
+- Go 1.21
+- Chi Router
+- Docker & Docker Compose
+- DaData API
+
+## Быстрый старт
+
+### Docker
+
+```bash
+# Запуск сервиса
+docker-compose up -d
+```
+
+### Локальный запуск
+
+```bash
+# Установка зависимостей
+go mod download
+
+# Запуск сервиса
+go run cmd/app/main.go
+```
+
+## API Endpoints
+
+### Поиск адреса
+```http
+POST /api/address/search
+Content-Type: application/x-www-form-urlencoded
+
+query=улица Ленина
+```
+
+### Геокодирование координат
+```http
+POST /api/address/geocode
+Content-Type: application/json
+
+{
+    "lat": "55.7558",
+    "lng": "37.6173"
+}
+```
+
+### Проверка здоровья сервиса
+```http
+GET /api/health
+```
+
+## Конфигурация
+
+Сервис использует следующие переменные окружения:
+
+- `DADATA_API_KEY` - API ключ DaData
+- `DADATA_SECRET_KEY` - Секретный ключ DaData
+
+## Структура проекта
+
+```
+.
+├── cmd/
+│   └── app/              # Точка входа приложения
+├── internal/
+│   ├── controllers/      # HTTP контроллеры
+│   ├── domain/          # Доменные модели
+│   ├── infrastructure/  # Инфраструктурный код
+│   └── service/         # Бизнес-логика
+├── Dockerfile
+├── docker-compose.yml
+└── README.md
+```
+```
