@@ -1,7 +1,3 @@
-
-
-Создадим README.md с описанием проекта:
-
 ```markdown:README.md
 # Geo Service API
 
