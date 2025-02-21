@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: geo-service
+    ports:
+      - "8080:8080"
+    environment:
+      - DADATA_API_KEY=627de73a10855ebb80eb0191f2bbb55cc72eef89
+      - DADATA_SECRET_KEY=7886bc85cac2562af90304564e7f04078d18dc4b
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "wget", "--spider", "-q", "http://localhost:8080/api/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
