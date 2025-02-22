@@ -1,4 +1,4 @@
-package service
+package dadata
 
 import (
 	"context"
@@ -9,42 +9,21 @@ import (
 	"strings"
 
 	"test/internal/domain"
+	"test/internal/infrastructure/dadata/models"
 
 	"github.com/ekomobile/dadata/v2/api/suggest"
 	"github.com/ekomobile/dadata/v2/client"
 )
 
-type GeoService struct {
-	api       *suggest.Api
-	apiKey    string
-	secretKey string
+// Provider реализует взаимодействие с API DaData
+type Provider struct {
+	api       *suggest.Api // Клиент API DaData
+	apiKey    string       // Ключ API
+	secretKey string       // Секретный ключ
 }
 
-type GeoProvider interface {
-	AddressSearch(input string) ([]*domain.Address, error)
-	GeoCode(lat, lng string) ([]*domain.Address, error)
-}
-
-type GeoCode struct {
-	Suggestions []Suggestion `json:"suggestions"`
-}
-
-type Suggestion struct {
-	Value             string `json:"value"`
-	UnrestrictedValue string `json:"unrestricted_value"`
-	Data              Data   `json:"data"`
-}
-
-type Data struct {
-	City   string `json:"city"`
-	Street string `json:"street"`
-	House  string `json:"house"`
-	GeoLat string `json:"geo_lat"`
-	GeoLon string `json:"geo_lon"`
-}
-
-func NewGeoService(apiKey, secretKey string) *GeoService {
-	var err error
+// NewProvider создает новый экземпляр провайдера DaData
+func NewProvider(apiKey, secretKey string) *Provider {
 	endpointUrl, err := url.Parse("https://suggestions.dadata.ru/suggestions/api/4_1/rs/")
 	if err != nil {
 		return nil
@@ -59,16 +38,17 @@ func NewGeoService(apiKey, secretKey string) *GeoService {
 		Client: client.NewClient(endpointUrl, client.WithCredentialProvider(&creds)),
 	}
 
-	return &GeoService{
+	return &Provider{
 		api:       &api,
 		apiKey:    apiKey,
 		secretKey: secretKey,
 	}
 }
 
-func (g *GeoService) AddressSearch(input string) ([]*domain.Address, error) {
+// AddressSearch выполняет поиск адресов через API DaData
+func (p *Provider) AddressSearch(input string) ([]*domain.Address, error) {
 	var res []*domain.Address
-	rawRes, err := g.api.Address(context.Background(), &suggest.RequestParams{Query: input})
+	rawRes, err := p.api.Address(context.Background(), &suggest.RequestParams{Query: input})
 	if err != nil {
 		return nil, err
 	}
@@ -85,11 +65,11 @@ func (g *GeoService) AddressSearch(input string) ([]*domain.Address, error) {
 			Lon:    r.Data.GeoLon,
 		})
 	}
-
 	return res, nil
 }
 
-func (g *GeoService) GeoCode(lat, lng string) ([]*domain.Address, error) {
+// GeoCode выполняет геокодирование через API DaData
+func (p *Provider) GeoCode(lat, lng string) ([]*domain.Address, error) {
 	httpClient := &http.Client{}
 	var data = strings.NewReader(fmt.Sprintf(`{"lat": %s, "lon": %s}`, lat, lng))
 	req, err := http.NewRequest("POST", "https://suggestions.dadata.ru/suggestions/api/4_1/rs/geolocate/address", data)
@@ -98,28 +78,25 @@ func (g *GeoService) GeoCode(lat, lng string) ([]*domain.Address, error) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Authorization", fmt.Sprintf("Token %s", g.apiKey))
+	req.Header.Set("Authorization", fmt.Sprintf("Token %s", p.apiKey))
 	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
-	var geoCode GeoCode
-
-	err = json.NewDecoder(resp.Body).Decode(&geoCode)
-	if err != nil {
+	var geoCode models.GeoCode
+	if err := json.NewDecoder(resp.Body).Decode(&geoCode); err != nil {
 		return nil, err
 	}
+
 	var res []*domain.Address
 	for _, r := range geoCode.Suggestions {
-		var address domain.Address
-		address.City = string(r.Data.City)
-		address.Street = string(r.Data.Street)
-		address.House = r.Data.House
-		address.Lat = r.Data.GeoLat
-		address.Lon = r.Data.GeoLon
-
-		res = append(res, &address)
+		res = append(res, &domain.Address{
+			City:   string(r.Data.City),
+			Street: string(r.Data.Street),
+			House:  r.Data.House,
+			Lat:    r.Data.GeoLat,
+			Lon:    r.Data.GeoLon,
+		})
 	}
-
 	return res, nil
 }

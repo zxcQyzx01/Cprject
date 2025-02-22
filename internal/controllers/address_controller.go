@@ -8,42 +8,34 @@ import (
 	"test/internal/service"
 )
 
+// AddressController обрабатывает HTTP-запросы для работы с адресами
 type AddressController struct {
-	geoProvider service.GeoProvider
-	responder   customhttp.Responder
+	geoService service.GeoServicer  // Сервис для работы с геоданными
+	responder  customhttp.Responder // Компонент для отправки HTTP-ответов
 }
 
-func NewAddressController(geoProvider service.GeoProvider, responder customhttp.Responder) *AddressController {
+// NewAddressController создает новый экземпляр контроллера
+func NewAddressController(geoService service.GeoServicer, responder customhttp.Responder) *AddressController {
 	return &AddressController{
-		geoProvider: geoProvider,
-		responder:   responder,
+		geoService: geoService,
+		responder:  responder,
 	}
 }
 
-type SearchRequest struct {
-	Query string `json:"query"`
-}
-
-type GeocodeRequest struct {
-	Lat string `json:"lat"`
-	Lng string `json:"lng"`
-}
-
+// Search обрабатывает запросы на поиск адресов
 func (c *AddressController) Search(w http.ResponseWriter, r *http.Request) {
-	var req SearchRequest
-
 	if err := r.ParseForm(); err != nil {
 		c.responder.Error(w, http.StatusBadRequest, "Неверные параметры запроса")
 		return
 	}
 
-	req.Query = r.Form.Get("query")
-	if req.Query == "" {
+	query := r.Form.Get("query")
+	if query == "" {
 		c.responder.Error(w, http.StatusBadRequest, "Параметр 'query' не предоставлен")
 		return
 	}
 
-	result, err := c.geoProvider.AddressSearch(req.Query)
+	result, err := c.geoService.Search(query)
 	if err != nil {
 		c.responder.Error(w, http.StatusInternalServerError, "Ошибка поиска адреса")
 		return
@@ -54,8 +46,12 @@ func (c *AddressController) Search(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// Geocode обрабатывает запросы на геокодирование
 func (c *AddressController) Geocode(w http.ResponseWriter, r *http.Request) {
-	var req GeocodeRequest
+	var req struct {
+		Lat string `json:"lat"`
+		Lng string `json:"lng"`
+	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		c.responder.Error(w, http.StatusBadRequest, "Неверный формат запроса")
@@ -67,7 +63,7 @@ func (c *AddressController) Geocode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := c.geoProvider.GeoCode(req.Lat, req.Lng)
+	result, err := c.geoService.Geocode(req.Lat, req.Lng)
 	if err != nil {
 		c.responder.Error(w, http.StatusInternalServerError, "Ошибка геокодирования")
 		return
