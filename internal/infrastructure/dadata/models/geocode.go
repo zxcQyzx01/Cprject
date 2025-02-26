@@ -1,4 +1,4 @@
-package main
+package models
 
 import "encoding/json"
 
@@ -12,17 +12,20 @@ func (r *GeoCode) Marshal() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+// GeoCode представляет структуру ответа от API DaData
 type GeoCode struct {
-	Suggestions []Suggestion `json:"suggestions"`
+	Suggestions []Suggestion `json:"suggestions"` // Массив найденных адресов
 }
 
+// Suggestion представляет структуру предложения адреса
 type Suggestion struct {
-	Value             string `json:"value"`
-	UnrestrictedValue string `json:"unrestricted_value"`
-	Data              Data   `json:"data"`
+	Value             string     `json:"value"`              // Полное значение адреса
+	UnrestrictedValue string     `json:"unrestricted_value"` // Неформатированное значение
+	Data              DadataData `json:"data"`               // Детальные данные адреса
 }
 
-type Data struct {
+// DadataData содержит детальную информацию об адресе
+type DadataData struct {
 	PostalCode           string          `json:"postal_code"`
 	Country              Country         `json:"country"`
 	CountryISOCode       CountryISOCode  `json:"country_iso_code"`
